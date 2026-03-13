@@ -1,89 +1,99 @@
-import { useState, useEffect, createContext, useContext } from 'react'
-import { auth } from './api/client.js'
-import Layout from './components/Layout.jsx'
-import LoginPage from './pages/LoginPage.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Drivers from './pages/Drivers.jsx'
-import Vehicles from './pages/Vehicles.jsx'
-import Payments from './pages/Payments.jsx'
-import Loans from './pages/Loans.jsx'
-import UPI from './pages/UPI.jsx'
-import Purchases from './pages/Purchases.jsx'
-import Maintenance from './pages/Maintenance.jsx'
-import Messages from './pages/Messages.jsx'
-import Reports from './pages/Reports.jsx'
-import FleetManagers from './pages/FleetManagers.jsx'
-import Users from './pages/Users.jsx'
+import { useState } from "react";
+import Layout from "./components/Layout";
+import AdminDashboard from "./pages/AdminDashboard";
+import Drivers from "./pages/Drivers";
+import Vehicles from "./pages/Vehicles";
+import VehicleDetail from "./pages/VehicleDetail";
+import Payments from "./pages/Payments";
+import Companies from "./pages/Companies";
+import Fleets from "./pages/Fleets";
+import Loans from "./pages/Loans";
+import Purchase from "./pages/Purchase";
+import Ranking from "./pages/Ranking";
+import Reports from "./pages/Reports";
+import Maintenance from "./pages/Maintenance";
+import UPI from "./pages/UPI";
+import Messages from "./pages/Messages";
+import MotoristaDashboard from "./pages/MotoristaDashboard";
 
-export const AuthContext = createContext(null)
-export const useAuth = () => useContext(AuthContext)
+// ─── ROLE SIMULATION CONFIG ──────────────────────────────────────────────────
+export const SIM_ROLES = {
+  admin: {
+    label: "Admin",
+    avatar: "AD",
+    defaultPage: "admin-dash",
+    sidebarType: "admin",
+  },
+  motorista: {
+    label: "Motorista — Carlos Mendes",
+    avatar: "CM",
+    defaultPage: "motorista-dash",
+    sidebarType: "motorista",
+  },
+  "fleet-manager": {
+    label: "Fleet Manager — Ana Ferreira",
+    avatar: "AF",
+    defaultPage: "admin-dash",
+    sidebarType: "fleet-manager",
+  },
+  "fleet-saas": {
+    label: "Fleet Manager SaaS — João Silva",
+    avatar: "JS",
+    defaultPage: "admin-dash",
+    sidebarType: "fleet-saas",
+  },
+};
 
+// ─── PAGE REGISTRY ────────────────────────────────────────────────────────────
 const PAGES = {
-  dashboard: Dashboard,
+  "admin-dash": AdminDashboard,
   drivers: Drivers,
   vehicles: Vehicles,
+  "vehicle-detail": VehicleDetail,
   payments: Payments,
+  companies: Companies,
+  fleets: Fleets,
   loans: Loans,
-  upi: UPI,
-  purchases: Purchases,
-  maintenance: Maintenance,
-  messages: Messages,
+  purchase: Purchase,
+  ranking: Ranking,
   reports: Reports,
-  fleet_managers: FleetManagers,
-  users: Users,
-}
+  maintenance: Maintenance,
+  upi: UPI,
+  messages: Messages,
+  "motorista-dash": MotoristaDashboard,
+};
 
 export default function App() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState('dashboard')
+  const [currentPage, setCurrentPage] = useState("admin-dash");
+  const [currentRole, setCurrentRole] = useState("admin");
+  const [isSimulating, setIsSimulating] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (token) {
-      auth.me().then(u => { setUser(u); setLoading(false) })
-               .catch(() => { localStorage.clear(); setLoading(false) })
-    } else {
-      setLoading(false)
-    }
-  }, [])
+  const navigate = (page) => setCurrentPage(page);
 
-  // Handle browser back/forward
-  useEffect(() => {
-    const path = window.location.pathname.replace('/', '') || 'dashboard'
-    if (PAGES[path]) setPage(path)
-  }, [])
+  const simulate = (role) => {
+    setCurrentRole(role);
+    setIsSimulating(role !== "admin");
+    setCurrentPage(SIM_ROLES[role].defaultPage);
+  };
 
-  const navigate = (p) => {
-    setPage(p)
-    window.history.pushState({}, '', '/' + p)
-  }
+  const stopSimulation = () => {
+    setCurrentRole("admin");
+    setIsSimulating(false);
+    setCurrentPage("admin-dash");
+  };
 
-  const handleLogin = (data) => {
-    setUser(data.user)
-    navigate('dashboard')
-  }
-
-  const handleLogout = () => {
-    auth.logout()
-    setUser(null)
-  }
-
-  if (loading) return (
-    <div className="loading-page">
-      <div className="spinner" style={{width:32,height:32}}/>
-    </div>
-  )
-
-  if (!user) return <LoginPage onLogin={handleLogin} />
-
-  const PageComponent = PAGES[page] || Dashboard
+  const PageComponent = PAGES[currentPage] || AdminDashboard;
 
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
-      <Layout user={user} page={page} navigate={navigate} onLogout={handleLogout}>
-        <PageComponent user={user} navigate={navigate} />
-      </Layout>
-    </AuthContext.Provider>
-  )
+    <Layout
+      currentPage={currentPage}
+      navigate={navigate}
+      currentRole={currentRole}
+      isSimulating={isSimulating}
+      simulate={simulate}
+      stopSimulation={stopSimulation}
+    >
+      <PageComponent navigate={navigate} currentRole={currentRole} />
+    </Layout>
+  );
 }
